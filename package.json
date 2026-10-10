@@ -17,6 +17,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@llamaindex/llama-cloud": "^2.18.0",
     "@mastra/core": "1.75.0",
     "@mastra/duckdb": "1.13.0",
     "@mastra/libsql": "1.25.1",

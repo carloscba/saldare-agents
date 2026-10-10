@@ -9,14 +9,19 @@ import {
   SensitiveDataFilter,
 } from '@mastra/observability';
 import { agent } from './agents/agent';
+import { bankMovementsExtractor } from './agents/bank-movements-extractor';
 import { startScheduleTool, stopScheduleTool } from './tools/schedule-tools';
+import { llamaCloudUpload, llamaCloudParse } from './tools/llama-cloud-tool';
+import { processBankStatement } from './tools/process-bank-statement';
+import { llamaCloudWorkflow } from './workflows/llama-cloud-workflow';
 
 export const mastra = new Mastra({
   bundler: {
     externals: ['@duckdb/node-bindings'],
   },
-  agents: { agent },
-  tools: { startScheduleTool, stopScheduleTool },
+  agents: { agent, bankMovementsExtractor },
+  tools: { startScheduleTool, stopScheduleTool, llamaCloudUpload, llamaCloudParse, processBankStatement },
+  workflows: { llamaCloudWorkflow },
   storage: new MastraCompositeStore({
     id: 'composite-storage',
     default: new LibSQLStore({

@@ -1,10 +1,13 @@
 import { pathToFileURL } from 'node:url';
 import { Agent } from '@mastra/core/agent';
 import { TaskSignalProvider } from '@mastra/core/signals';
-import { askUserTool, webFetchTool, webSearchTool } from '@mastra/core/tools';
+import { askUserTool, webFetchTool } from '@mastra/core/tools';
 import { LocalFilesystem, LocalSandbox, WORKSPACE_TOOLS, Workspace } from '@mastra/core/workspace';
 import { Memory } from '@mastra/memory';
 import { startScheduleTool, stopScheduleTool } from '../tools/schedule-tools';
+import { llamaCloudUpload, llamaCloudParse } from '../tools/llama-cloud-tool';
+import { processBankStatement } from '../tools/process-bank-statement';
+import { opencodeGoHeaders } from './opencode-headers';
 
 const workspacePath = 'workspace';
 
@@ -27,6 +30,7 @@ const workspace = new Workspace({
     [WORKSPACE_TOOLS.FILESYSTEM.DELETE]: {
       requireApproval: true,
     },
+    
   },
 });
 
@@ -51,8 +55,16 @@ When the user greets you or does not have a specific task, invite them to try th
 Ask concise questions when something is unclear or a good question could surface a useful insight.
 
 For local file changes, end with a plain-text URL using ${pathToFileURL(`${workspacePath}/`).href}; avoid Markdown links, localhost, /workspace, relative paths, and static-file servers.
+
+When the user wants to process a PDF bank statement, ask them for the local file path (e.g. workspace/statement.pdf) if it is not provided. Invoke the tool \`process_bank_statement\` with \`filePath\` to upload it to LlamaCloud, parse it, and return the consolidated CSV of movements. Do not ask the user to attach the PDF in the chat; the model used by this agent does not support file attachments. Return the CSV to the user.
 `,
-  model: 'google/gemini-3.5-flash',
+  model: [
+    {
+      id: 'main',
+      model: 'opencode-go/deepseek-v4-flash',
+      headers: opencodeGoHeaders,
+    },
+  ],
   defaultOptions: {
     maxSteps: 100,
     autoResumeSuspendedTools: true,
@@ -61,7 +73,13 @@ For local file changes, end with a plain-text URL using ${pathToFileURL(`${works
     options: {
       generateTitle: true,
       observationalMemory: {
-        model: 'google/gemini-3.5-flash',
+        model: [
+          {
+            id: 'om-main',
+            model: 'opencode-go/deepseek-v4-flash',
+            headers: opencodeGoHeaders,
+          },
+        ],
       },
     },
   }),
@@ -70,8 +88,10 @@ For local file changes, end with a plain-text URL using ${pathToFileURL(`${works
     ask_user: askUserTool,
     start_schedule: startScheduleTool,
     stop_schedule: stopScheduleTool,
+    llama_cloud_upload: llamaCloudUpload,
+    llama_cloud_parse: llamaCloudParse,
+    process_bank_statement: processBankStatement,
     web_fetch: webFetchTool,
-    web_search: webSearchTool,
   },
   signals: [new TaskSignalProvider()],
 });
