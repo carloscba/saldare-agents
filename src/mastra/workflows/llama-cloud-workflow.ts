@@ -1,11 +1,18 @@
-import { createWorkflow } from '@mastra/core/workflows';
+import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { llamaCloudUpload, llamaCloudParse } from '../tools/llama-cloud-tool';
 import {
-  bankMovementsExtractor,
+  bankIdSchema,
+  bankExtractors,
+  bankIds,
+  type BankId,
+} from '../agents/bank-extractors';
+import { extractMovementsChunked } from '../agents/bank-extractors/chunk';
+import {
   extractorOutputSchema,
   movementsToCsv,
-} from '../agents/bank-movements-extractor';
+  type MovimientoRow,
+} from '../agents/bank-extractors/types';
 
 const fileInputSchema = z.object({
   name: z.string(),
@@ -21,6 +28,7 @@ const inputSchema = z
     file: fileInputSchema
       .optional()
       .describe('PDF codificado en base64 (name + data).'),
+    bank: bankIdSchema.describe('Banco del extracto (ej. "macro").'),
     tier: z
       .enum(['fast', 'cost_effective', 'agentic', 'agentic_plus'])
       .optional()
@@ -43,6 +51,27 @@ const inputSchema = z
   });
 
 type InputType = z.infer<typeof inputSchema>;
+
+const extractorStepInputSchema = z.object({
+  markdown: z.string(),
+});
+
+function makeExtractorStep(bank: BankId) {
+  const { agent, context } = bankExtractors[bank];
+
+  return createStep({
+    id: `bank-extractor-${bank}`,
+    inputSchema: extractorStepInputSchema,
+    outputSchema: extractorOutputSchema,
+    execute: async ({ inputData }) => {
+      return extractMovementsChunked({
+        agent,
+        markdown: inputData.markdown,
+        context: context?.(inputData.markdown),
+      });
+    },
+  });
+}
 
 export const llamaCloudWorkflow = createWorkflow({
   id: 'llama-cloud-workflow',
@@ -68,17 +97,25 @@ export const llamaCloudWorkflow = createWorkflow({
   }))
   .tool(llamaCloudParse, {}, { id: 'parse' })
   .map(async ({ inputData }) => ({
-    prompt: `Extrae los movimientos bancarios del siguiente markdown:\n\n${inputData.markdown}`,
+    markdown: inputData.markdown,
   }))
-  .agent(bankMovementsExtractor, {
-    structuredOutput: { schema: extractorOutputSchema },
-  })
-  .map(async ({ inputData, getStepResult }) => {
+  .branch(
+    bankIds.map((bank) => [
+      async ({ getInitData }) => getInitData<InputType>().bank === bank,
+      makeExtractorStep(bank),
+    ])
+  )
+  .map(async ({ inputData, getStepResult, getInitData }) => {
     const { markdown, text } = getStepResult<{ markdown: string; text: string }>('parse');
+    const bank = getInitData<InputType>().bank;
+    const stepId = `bank-extractor-${bank}`;
+    const result = (inputData as Record<string, { movimientos: MovimientoRow[] } | undefined>)[
+      stepId
+    ];
     return {
       markdown,
       text,
-      csv: movementsToCsv(inputData.movimientos),
+      csv: movementsToCsv(result?.movimientos ?? []),
     };
   })
   .commit();

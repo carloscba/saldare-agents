@@ -1,5 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
+import { bankIdSchema } from '../agents/bank-extractors';
 
 const fileInputSchema = z.object({
   name: z.string(),
@@ -11,6 +12,7 @@ export const processBankStatement = createTool({
   description:
     'Procesa un extracto bancario (PDF): lo sube a LlamaCloud, lo parsea y extrae los movimientos en un CSV consolidado. Recibe una ruta local (filePath) o el contenido del PDF en base64 (file).',
   inputSchema: z.object({
+    bank: bankIdSchema.describe('Banco del extracto (ej. "frances").'),
     filePath: z
       .string()
       .optional()
@@ -68,6 +70,7 @@ export const processBankStatement = createTool({
     const result = await run.start({
       inputData: {
         ...fileInput,
+        bank: input.bank,
         tier: input.tier,
         version: input.version,
         expand: input.expand,

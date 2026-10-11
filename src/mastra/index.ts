@@ -9,7 +9,7 @@ import {
   SensitiveDataFilter,
 } from '@mastra/observability';
 import { agent } from './agents/agent';
-import { bankMovementsExtractor } from './agents/bank-movements-extractor';
+import { bankExtractors } from './agents/bank-extractors';
 import { startScheduleTool, stopScheduleTool } from './tools/schedule-tools';
 import { llamaCloudUpload, llamaCloudParse } from './tools/llama-cloud-tool';
 import { processBankStatement } from './tools/process-bank-statement';
@@ -19,7 +19,10 @@ export const mastra = new Mastra({
   bundler: {
     externals: ['@duckdb/node-bindings'],
   },
-  agents: { agent, bankMovementsExtractor },
+  agents: {
+    agent,
+    ...Object.fromEntries(Object.values(bankExtractors).map((cfg) => [cfg.agent.id, cfg.agent])),
+  },
   tools: { startScheduleTool, stopScheduleTool, llamaCloudUpload, llamaCloudParse, processBankStatement },
   workflows: { llamaCloudWorkflow },
   storage: new MastraCompositeStore({
