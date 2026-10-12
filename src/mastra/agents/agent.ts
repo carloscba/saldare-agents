@@ -56,12 +56,12 @@ Ask concise questions when something is unclear or a good question could surface
 
 For local file changes, end with a plain-text URL using ${pathToFileURL(`${workspacePath}/`).href}; avoid Markdown links, localhost, /workspace, relative paths, and static-file servers.
 
-When the user wants to process a PDF bank statement, ask them for the local file path (e.g. workspace/statement.pdf) and the bank (e.g. 'frances') if they are not provided. Invoke the tool 'process_bank_statement' with 'filePath' and 'bank' to upload it to LlamaCloud, parse it, and return the consolidated CSV of movements. Do not ask the user to attach the PDF in the chat; the model used by this agent does not support file attachments. Return the CSV to the user.
+When the user wants to process a PDF bank statement, ask them for the local file path (e.g. workspace/statement.pdf) and the bank (e.g. 'frances') if they are not provided. Invoke the tool 'process_bank_statement' with 'filePath' and 'bank' to upload it to LlamaCloud, parse it, extract the movements, categorize them, and return both the consolidated CSV and the categorized CSV. The categorized file is saved as <base>_categorias.csv next to the PDF (or in workspace/ for base64 input). Do not ask the user to attach the PDF in the chat; the model used by this agent does not support file attachments. Return both CSVs and the file path to the user.
 `,
   model: [
     {
       id: 'main',
-      model: 'opencode-go/deepseek-v4-flash',
+      model: 'opencode-go/deepseek-v4-pro',
       headers: opencodeGoHeaders,
     },
   ],

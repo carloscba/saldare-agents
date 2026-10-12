@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { movementCategorySchema } from '../../categories';
 
 export const movimientoRowSchema = z.object({
   cuenta: z
@@ -53,6 +54,29 @@ export function movementsToCsv(
   const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
   const rows = movimientos.map((m) =>
     [m.cuenta, m.fecha, m.descripcion, m.referencia, m.debitos, m.creditos, m.saldo]
+      .map(escape)
+      .join(',')
+  );
+  return [header.map(escape).join(','), ...rows].join('\n');
+}
+
+export const categorizedMovimientoRowSchema = movimientoRowSchema.extend({
+  categoria: movementCategorySchema,
+});
+
+export const categorizerOutputSchema = z.object({
+  movimientos: z.array(categorizedMovimientoRowSchema),
+});
+
+export type CategorizedMovimientoRow = z.infer<typeof categorizedMovimientoRowSchema>;
+
+export function categorizedMovementsToCsv(
+  movimientos: CategorizedMovimientoRow[]
+): string {
+  const header = ['CUENTA', 'FECHA', 'DESCRIPCION', 'REFERENCIA', 'DEBITOS', 'CREDITOS', 'SALDO', 'CATEGORIA'];
+  const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
+  const rows = movimientos.map((m) =>
+    [m.cuenta, m.fecha, m.descripcion, m.referencia, m.debitos, m.creditos, m.saldo, m.categoria]
       .map(escape)
       .join(',')
   );

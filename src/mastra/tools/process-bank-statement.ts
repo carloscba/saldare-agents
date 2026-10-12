@@ -10,7 +10,7 @@ const fileInputSchema = z.object({
 export const processBankStatement = createTool({
   id: 'process_bank_statement',
   description:
-    'Procesa un extracto bancario (PDF): lo sube a LlamaCloud, lo parsea y extrae los movimientos en un CSV consolidado. Recibe una ruta local (filePath) o el contenido del PDF en base64 (file).',
+    'Procesa un extracto bancario (PDF): lo sube a LlamaCloud, lo parsea, extrae los movimientos en un CSV consolidado y genera un CSV categorizado con la columna CATEGORIA guardado como <base>_categorias.csv. Recibe una ruta local (filePath) o el contenido del PDF en base64 (file).',
   inputSchema: z.object({
     bank: bankIdSchema.describe('Banco del extracto (ej. "frances").'),
     filePath: z
@@ -45,6 +45,8 @@ export const processBankStatement = createTool({
       .describe(
         'CSV consolidado (RFC 4180) con una fila por movimiento de todas las tablas: columnas CUENTA | FECHA | DESCRIPCION | REFERENCIA | DEBITOS | CREDITOS | SALDO.'
       ),
+    csvCategorias: z.string().describe('CSV con columna CATEGORIA.'),
+    csvCategoriasPath: z.string().describe('Ruta del archivo *_categorias.csv guardado.'),
   }),
   execute: async (input, context) => {
     let fileInput: { filePath?: string; file?: { name: string; data: string } };

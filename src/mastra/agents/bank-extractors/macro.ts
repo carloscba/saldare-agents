@@ -10,7 +10,7 @@ export const bankExtractorMacro = new Agent({
   model: [
     {
       id: 'extractor',
-      model: 'opencode-go/kimi-k2.7-code',
+      model: 'opencode-go/deepseek-v4-flash',
       headers: opencodeGoHeaders,
     },
   ],
